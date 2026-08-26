@@ -13,15 +13,20 @@ if "quiz_submitted" not in st.session_state:
 answers = {}
 for i, q in enumerate(questions):
     st.markdown(f"**Q{i+1}. {q['question']}**")
-    answers[i] = st.radio("Select one:", q["options"], key=f"q{i}", label_visibility="collapsed")
+    options = ["— Select an answer —"] + q["options"]
+    answers[i] = st.radio("Select one:", options, key=f"q{i}", label_visibility="collapsed")
     st.markdown("")
 
 if st.button("Submit Quiz"):
-    correct = sum(1 for i, q in enumerate(questions) if answers[i] == q["answer"])
-    score_percent = round((correct / len(questions)) * 100)
-    st.session_state.quiz_submitted = True
-    st.session_state.last_score = score_percent
-    st.session_state.last_topic = topic
+    unanswered = [i for i, q in enumerate(questions) if answers[i] == "— Select an answer —"]
+    if unanswered:
+        st.error("Please answer all questions before submitting.")
+    else:
+        correct = sum(1 for i, q in enumerate(questions) if answers[i] == q["answer"])
+        score_percent = round((correct / len(questions)) * 100)
+        st.session_state.quiz_submitted = True
+        st.session_state.last_score = score_percent
+        st.session_state.last_topic = topic
 
 if st.session_state.quiz_submitted:
     score = st.session_state.last_score
