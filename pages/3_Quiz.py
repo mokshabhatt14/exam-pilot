@@ -4,7 +4,7 @@ from utils import api_client
 st.set_page_config(page_title="Quiz", layout="wide")
 st.title("📝 Quiz")
 
-topic = st.selectbox("Choose a topic to quiz yourself on:", ["OS", "Trees", "DP", "Graphs", "Arrays"])
+topic = st.selectbox("Choose a topic to quiz yourself on:", api_client.fetch_available_topics())
 questions = api_client.fetch_quiz_questions(topic)
 
 if "quiz_submitted" not in st.session_state:
