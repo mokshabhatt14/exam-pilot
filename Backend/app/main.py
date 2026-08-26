@@ -9,12 +9,12 @@ is added below (e.g. app/api/routes/planner.py, app/api/routes/auth.py).
 """
 
 from fastapi import FastAPI
-from app.api.routes import twin
+from app.api.routes import twin,data
 
 app = FastAPI(title="ExamPilot API")
 
 app.include_router(twin.router)
-
+app.include_router(data.router)
 
 @app.get("/")
 def root():

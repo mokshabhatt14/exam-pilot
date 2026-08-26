@@ -1,0 +1,11 @@
+from .connection import Base, engine
+from . import models
+
+
+def init_db():
+    Base.metadata.create_all(bind=engine)
+    print("ExamPilot database initialized successfully.")
+
+
+if __name__ == "__main__":
+    init_db()
