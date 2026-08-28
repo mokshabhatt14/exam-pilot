@@ -14,9 +14,18 @@ Owns one TopicState per syllabus topic for a student, and exposes:
 This file is deliberately the ONLY place that other modules (dashboard,
 planner, backend API) need to import from. Everything else (knowledge_state,
 forgetting_model) is an internal implementation detail.
+
+NOTE for the team: recommend_next_topic()/explain() below are Person 1's
+basic, single-signal recommendation (forgetting risk * exam weight only).
+Person 4's app/core/prediction/ package builds the fuller version used by
+the actual app — it adds exam urgency (from exam_date), mistake density,
+a sanity-check pass, and the AI-disagreement feature. Keep this method
+around since it's still a handy one-liner for quick checks/tests, but the
+frontend and study planner should call into Person 4's PredictionEngine
+instead.
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from typing import Optional
 
 from .knowledge_state import TopicState, ActionEvent
@@ -24,16 +33,30 @@ from . import forgetting_model as fm
 
 
 class KnowledgeTwinEngine:
-    def __init__(self, topics: list, exam_weights: Optional[dict] = None):
+    def __init__(self, topics: list, exam_weights: Optional[dict] = None, exam_dates: Optional[dict] = None):
         """
         topics: list of topic names, e.g. ["Arrays", "Trees", "Graphs", "DP", "OS"]
         exam_weights: optional dict topic -> relative importance (default 1.0 each)
+        exam_dates: optional dict topic -> date of the exam this topic belongs to
+                    (default None per topic, meaning "unknown/not scheduled yet")
         """
         exam_weights = exam_weights or {}
+        exam_dates = exam_dates or {}
         self.topics: dict = {
-            t: TopicState(topic=t, exam_weight=exam_weights.get(t, 1.0))
+            t: TopicState(
+                topic=t,
+                exam_weight=exam_weights.get(t, 1.0),
+                exam_date=exam_dates.get(t),
+            )
             for t in topics
         }
+
+    def set_exam_date(self, topic: str, exam_date: date) -> None:
+        """Set/update a topic's exam date after construction — e.g. once
+        Person 2's backend supplies the real syllabus/exam schedule."""
+        if topic not in self.topics:
+            raise ValueError(f"Unknown topic: {topic}")
+        self.topics[topic].exam_date = exam_date
 
     # ------------------------------------------------------------------
     # Writing: every student action flows through here
@@ -126,7 +149,8 @@ class KnowledgeTwinEngine:
         return {t: self.get_forgetting_risk(t, hours_ahead) for t in self.topics}
 
     # ------------------------------------------------------------------
-    # Deciding: turn predictions into a recommendation
+    # Deciding: turn predictions into a recommendation (basic version —
+    # see the note at the top of this file re: Person 4's PredictionEngine)
     # ------------------------------------------------------------------
     def recommend_next_topic(self, hours_ahead: float = 24) -> str:
         """
